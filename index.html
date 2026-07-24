@@ -356,7 +356,7 @@
     <span class="flame">🕯️</span>
     <h1>Daily Worship Roll</h1>
     <div class="date" id="todayLabel"></div>
-    <p class="verse">“And whatsoever ye do, do it heartily, as to the Lord” — Colossians 3:23</p>
+    <p class="verse">“And whatsoever ye do, do it heartily, as to the Lord” (Colossians 3:23)</p>
   </header>
 
   <nav>
@@ -378,7 +378,7 @@
   <section id="tab-people" class="tab">
     <div class="panel">
       <h2>People</h2>
-      <p class="sub">Names are saved on this device — add them once and they stay on the roll every day. Mark someone as a <strong>Worship Leader</strong> and the Worship Lead role will only be rolled among leaders.</p>
+      <p class="sub">Names are saved on this device. Add them once and they stay on the roll every day. Mark someone as a <strong>Worship Leader</strong> and the Worship Lead role will only be rolled among leaders.</p>
       <form class="add-row" id="personForm">
         <input type="text" id="personName" placeholder="Add a name…" autocomplete="off" />
         <button type="submit" class="btn">Add Person</button>
@@ -391,7 +391,7 @@
   <section id="tab-songs" class="tab">
     <div class="panel">
       <h2>Worship Songs</h2>
-      <p class="sub">Add your worship songs with lyrics. When the roll picks a Worship Lead, it also picks a song at random — songs assigned to that leader are preferred, otherwise any song can come up.</p>
+      <p class="sub">Add your worship songs with lyrics. When the roll picks a Worship Lead, it also picks a song at random: songs assigned to that leader are preferred, otherwise any song can come up.</p>
       <form id="songForm">
         <label class="field-label" for="songTitle">Song title</label>
         <input type="text" id="songTitle" placeholder="e.g. Amazing Grace" autocomplete="off" style="width:100%" />
@@ -575,7 +575,7 @@
     btn.disabled = false;
     var roll = state.rolls[todayKey()];
     if (!roll) {
-      hint.textContent = "No roll yet for today — press the button and let it decide.";
+      hint.textContent = "No roll yet for today. Press the button and let it decide.";
       board.innerHTML = '<div class="empty-note">Tonight’s assignments will appear here.</div>';
       return;
     }
@@ -591,14 +591,14 @@
         '<div class="icon">' + role.icon + '</div>' +
         '<div style="min-width:0">' +
           '<div class="role-name">' + esc(role.label) + '</div>' +
-          '<div class="person">' + esc(person ? person.name : "—") + '</div>';
+          '<div class="person">' + esc(person ? person.name : "?") + '</div>';
 
       if (role.key === "worship") {
         var song = roll.songId ? songById(roll.songId) : null;
         if (song) {
           html += '<div class="song-line">Song: <em>' + esc(song.title) + '</em></div>';
         } else {
-          html += '<div class="song-line">No songs yet — add some in the Songs tab.</div>';
+          html += '<div class="song-line">No songs yet. Add some in the Songs tab.</div>';
         }
       }
       html += "</div>";
@@ -623,7 +623,7 @@
     var list = document.getElementById("peopleList");
     list.innerHTML = "";
     if (state.people.length === 0) {
-      list.innerHTML = '<div class="empty-note">No names yet — add the first one above.</div>';
+      list.innerHTML = '<div class="empty-note">No names yet. Add the first one above.</div>';
       return;
     }
     state.people.forEach(function (p) {
@@ -681,7 +681,7 @@
     var list = document.getElementById("songList");
     list.innerHTML = "";
     if (state.songs.length === 0) {
-      list.innerHTML = '<div class="empty-note">No songs yet — the first two above the roll are waiting to be written in.</div>';
+      list.innerHTML = '<div class="empty-note">No songs yet. Add the first one above.</div>';
       return;
     }
     state.songs.forEach(function (s) {
