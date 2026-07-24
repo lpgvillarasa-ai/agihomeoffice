@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Daily Worship Roll</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Karla:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --night: #1b1420;
+    --night-soft: #241b2b;
+    --panel: #2b2135;
+    --panel-edge: #3d3049;
+    --gold: #e3b458;
+    --gold-bright: #f4cf7d;
+    --gold-dim: rgba(227, 180, 88, 0.35);
+    --cream: #f3ead9;
+    --cream-dim: #b9ad9e;
+    --rose: #d98a7e;
+    --sage: #9dbb8f;
+    --shadow: rgba(10, 6, 14, 0.55);
+    --serif: "Fraunces", "Georgia", serif;
+    --sans: "Karla", "Segoe UI", sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--sans);
+    background:
+      radial-gradient(1100px 600px at 50% -10%, rgba(227, 180, 88, 0.14), transparent 60%),
+      radial-gradient(800px 500px at 85% 100%, rgba(217, 138, 126, 0.07), transparent 60%),
+      var(--night);
+    color: var(--cream);
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+
+  .wrap { max-width: 860px; margin: 0 auto; padding: 2.5rem 1.25rem 5rem; }
+
+  /* ---------- header ---------- */
+  header { text-align: center; margin-bottom: 2rem; }
+  .flame {
+    font-size: 1.6rem;
+    display: inline-block;
+    animation: flicker 3.2s ease-in-out infinite;
+  }
+  @keyframes flicker {
+    0%, 100% { transform: scale(1) rotate(-2deg); opacity: .92; }
+    40% { transform: scale(1.08) rotate(2deg); opacity: 1; }
+    70% { transform: scale(.96) rotate(-1deg); opacity: .85; }
+  }
+  header h1 {
+    font-family: var(--serif);
+    font-weight: 550;
+    font-size: clamp(2.1rem, 6vw, 3.2rem);
+    letter-spacing: .01em;
+    color: var(--gold-bright);
+    margin-top: .35rem;
+  }
+  header .date {
+    color: var(--cream-dim);
+    font-size: .95rem;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    margin-top: .5rem;
+  }
+  header .verse {
+    font-family: var(--serif);
+    font-style: italic;
+    color: var(--cream-dim);
+    font-size: .95rem;
+    margin-top: .9rem;
+  }
+
+  /* ---------- tabs ---------- */
+  nav {
+    display: flex;
+    justify-content: center;
+    gap: .4rem;
+    margin: 2rem 0 1.8rem;
+    flex-wrap: wrap;
+  }
+  nav button {
+    font-family: var(--sans);
+    font-size: .95rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    background: transparent;
+    color: var(--cream-dim);
+    border: 1px solid transparent;
+    border-radius: 999px;
+    padding: .55rem 1.3rem;
+    cursor: pointer;
+    transition: all .2s ease;
+  }
+  nav button:hover { color: var(--gold-bright); }
+  nav button.active {
+    color: var(--night);
+    background: var(--gold);
+    box-shadow: 0 4px 18px rgba(227, 180, 88, 0.35);
+  }
+
+  .tab { display: none; }
+  .tab.visible { display: block; animation: fadeUp .35s ease both; }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ---------- roll button ---------- */
+  .roll-zone { text-align: center; margin-bottom: 2rem; }
+  #rollBtn {
+    font-family: var(--serif);
+    font-size: 1.35rem;
+    font-weight: 600;
+    color: var(--night);
+    background: linear-gradient(160deg, var(--gold-bright), var(--gold) 70%);
+    border: none;
+    border-radius: 14px;
+    padding: 1rem 2.8rem;
+    cursor: pointer;
+    box-shadow: 0 8px 30px rgba(227, 180, 88, 0.3), inset 0 1px 0 rgba(255,255,255,.5);
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  #rollBtn:hover { transform: translateY(-2px); box-shadow: 0 12px 36px rgba(227, 180, 88, 0.42), inset 0 1px 0 rgba(255,255,255,.5); }
+  #rollBtn:active { transform: translateY(1px) scale(.98); }
+  #rollBtn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+  .roll-hint { color: var(--cream-dim); font-size: .9rem; margin-top: .8rem; }
+  .roll-hint a { color: var(--gold); cursor: pointer; text-decoration: underline; }
+
+  /* ---------- assignment cards ---------- */
+  #board { display: grid; gap: .85rem; }
+  .role-card {
+    display: flex;
+    align-items: center;
+    gap: 1.1rem;
+    background: linear-gradient(180deg, var(--panel), var(--night-soft));
+    border: 1px solid var(--panel-edge);
+    border-left: 4px solid var(--gold);
+    border-radius: 12px;
+    padding: 1rem 1.3rem;
+    box-shadow: 0 6px 20px var(--shadow);
+    opacity: 0;
+    animation: cardIn .5s cubic-bezier(.2,.9,.3,1.2) forwards;
+  }
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(16px) scale(.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .role-card .icon { font-size: 1.7rem; width: 2.4rem; text-align: center; flex-shrink: 0; }
+  .role-card .role-name {
+    font-size: .78rem;
+    font-weight: 700;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--cream-dim);
+  }
+  .role-card .person {
+    font-family: var(--serif);
+    font-size: 1.55rem;
+    font-weight: 560;
+    color: var(--gold-bright);
+    line-height: 1.2;
+  }
+  .role-card .song-line { margin-top: .3rem; font-size: .95rem; color: var(--cream); }
+  .role-card .song-line em { color: var(--rose); font-style: normal; font-weight: 700; }
+  .lyrics-btn {
+    margin-left: auto;
+    flex-shrink: 0;
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: .82rem;
+    letter-spacing: .05em;
+    color: var(--gold-bright);
+    background: rgba(227, 180, 88, 0.12);
+    border: 1px solid var(--gold-dim);
+    border-radius: 999px;
+    padding: .5rem 1.05rem;
+    cursor: pointer;
+    transition: all .2s ease;
+  }
+  .lyrics-btn:hover { background: rgba(227, 180, 88, 0.25); }
+
+  .empty-note {
+    text-align: center;
+    color: var(--cream-dim);
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 1.05rem;
+    padding: 2.5rem 1rem;
+    border: 1px dashed var(--panel-edge);
+    border-radius: 12px;
+  }
+
+  /* ---------- lyrics panel ---------- */
+  #lyricsOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(12, 8, 16, 0.78);
+    backdrop-filter: blur(4px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1.25rem;
+    z-index: 50;
+  }
+  #lyricsOverlay.open { display: flex; animation: fadeUp .25s ease both; }
+  .lyrics-sheet {
+    background: linear-gradient(180deg, #2f2439, var(--night-soft));
+    border: 1px solid var(--gold-dim);
+    border-radius: 16px;
+    max-width: 620px;
+    width: 100%;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 30px 80px rgba(0,0,0,.6);
+  }
+  .lyrics-head {
+    display: flex;
+    align-items: baseline;
+    gap: .8rem;
+    padding: 1.4rem 1.6rem 1rem;
+    border-bottom: 1px solid var(--panel-edge);
+  }
+  .lyrics-head h2 { font-family: var(--serif); font-weight: 600; font-size: 1.6rem; color: var(--gold-bright); }
+  .lyrics-head .by { color: var(--cream-dim); font-size: .9rem; }
+  .lyrics-head .close {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: var(--cream-dim);
+    font-size: 1.5rem;
+    cursor: pointer;
+    line-height: 1;
+  }
+  .lyrics-head .close:hover { color: var(--cream); }
+  .lyrics-body {
+    padding: 1.4rem 1.8rem 2rem;
+    overflow-y: auto;
+    font-family: var(--serif);
+    font-size: 1.15rem;
+    line-height: 1.85;
+    white-space: pre-wrap;
+    color: var(--cream);
+  }
+
+  /* ---------- shared list panels (people & songs) ---------- */
+  .panel {
+    background: linear-gradient(180deg, var(--panel), var(--night-soft));
+    border: 1px solid var(--panel-edge);
+    border-radius: 14px;
+    padding: 1.5rem;
+    box-shadow: 0 6px 20px var(--shadow);
+  }
+  .panel h2 {
+    font-family: var(--serif);
+    font-weight: 560;
+    font-size: 1.5rem;
+    color: var(--gold-bright);
+    margin-bottom: .3rem;
+  }
+  .panel .sub { color: var(--cream-dim); font-size: .92rem; margin-bottom: 1.2rem; }
+
+  form.add-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-bottom: 1.3rem; }
+  input[type="text"], textarea, select {
+    font-family: var(--sans);
+    font-size: 1rem;
+    color: var(--cream);
+    background: var(--night);
+    border: 1px solid var(--panel-edge);
+    border-radius: 10px;
+    padding: .65rem .9rem;
+    outline: none;
+    transition: border-color .2s ease;
+  }
+  input[type="text"]:focus, textarea:focus, select:focus { border-color: var(--gold); }
+  input[type="text"] { flex: 1; min-width: 170px; }
+  textarea { width: 100%; min-height: 150px; resize: vertical; line-height: 1.6; }
+  select { min-width: 150px; }
+
+  .btn {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: .95rem;
+    color: var(--night);
+    background: var(--gold);
+    border: none;
+    border-radius: 10px;
+    padding: .65rem 1.3rem;
+    cursor: pointer;
+    transition: filter .15s ease, transform .15s ease;
+  }
+  .btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+  .btn.ghost {
+    color: var(--gold-bright);
+    background: rgba(227, 180, 88, 0.1);
+    border: 1px solid var(--gold-dim);
+  }
+
+  ul.roster { list-style: none; display: grid; gap: .5rem; }
+  ul.roster li {
+    display: flex;
+    align-items: center;
+    gap: .8rem;
+    background: var(--night);
+    border: 1px solid var(--panel-edge);
+    border-radius: 10px;
+    padding: .7rem 1rem;
+  }
+  ul.roster .name { font-family: var(--serif); font-size: 1.15rem; }
+  .badge {
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--night);
+    background: var(--gold);
+    border-radius: 999px;
+    padding: .18rem .6rem;
+  }
+  ul.roster .spacer { flex: 1; }
+  .mini-btn {
+    background: none;
+    border: 1px solid var(--panel-edge);
+    color: var(--cream-dim);
+    border-radius: 8px;
+    font-size: .8rem;
+    font-weight: 700;
+    padding: .35rem .7rem;
+    cursor: pointer;
+    transition: all .2s ease;
+  }
+  .mini-btn:hover { color: var(--gold-bright); border-color: var(--gold-dim); }
+  .mini-btn.danger:hover { color: var(--rose); border-color: var(--rose); }
+  .mini-btn.on { color: var(--night); background: var(--gold); border-color: var(--gold); }
+
+  .song-lyrics-preview { color: var(--cream-dim); font-size: .85rem; margin-top: .15rem; }
+  ul.roster li .song-info { min-width: 0; }
+  ul.roster li .song-info .name { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .field-label { font-size: .82rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--cream-dim); margin: .8rem 0 .35rem; display: block; }
+
+  footer { text-align: center; color: var(--cream-dim); font-size: .85rem; margin-top: 3.5rem; opacity: .7; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="flame">🕯️</span>
+    <h1>Daily Worship Roll</h1>
+    <div class="date" id="todayLabel"></div>
+    <p class="verse">“And whatsoever ye do, do it heartily, as to the Lord” — Colossians 3:23</p>
+  </header>
+
+  <nav>
+    <button class="active" data-tab="roll">Today's Roll</button>
+    <button data-tab="people">People</button>
+    <button data-tab="songs">Songs</button>
+  </nav>
+
+  <!-- ============ TODAY'S ROLL ============ -->
+  <section id="tab-roll" class="tab visible">
+    <div class="roll-zone">
+      <button id="rollBtn">🎲 &nbsp;Roll for Today</button>
+      <p class="roll-hint" id="rollHint"></p>
+    </div>
+    <div id="board"></div>
+  </section>
+
+  <!-- ============ PEOPLE ============ -->
+  <section id="tab-people" class="tab">
+    <div class="panel">
+      <h2>People</h2>
+      <p class="sub">Names are saved on this device — add them once and they stay on the roll every day. Mark someone as a <strong>Worship Leader</strong> and the Worship Lead role will only be rolled among leaders.</p>
+      <form class="add-row" id="personForm">
+        <input type="text" id="personName" placeholder="Add a name…" autocomplete="off" />
+        <button type="submit" class="btn">Add Person</button>
+      </form>
+      <ul class="roster" id="peopleList"></ul>
+    </div>
+  </section>
+
+  <!-- ============ SONGS ============ -->
+  <section id="tab-songs" class="tab">
+    <div class="panel">
+      <h2>Worship Songs</h2>
+      <p class="sub">Add your worship songs with lyrics. When the roll picks a Worship Lead, it also picks a song at random — songs assigned to that leader are preferred, otherwise any song can come up.</p>
+      <form id="songForm">
+        <label class="field-label" for="songTitle">Song title</label>
+        <input type="text" id="songTitle" placeholder="e.g. Amazing Grace" autocomplete="off" style="width:100%" />
+        <label class="field-label" for="songLeader">Led by (optional)</label>
+        <select id="songLeader"></select>
+        <label class="field-label" for="songLyrics">Lyrics</label>
+        <textarea id="songLyrics" placeholder="Paste the lyrics here…"></textarea>
+        <div style="margin-top:.9rem">
+          <button type="submit" class="btn" id="songSubmitBtn">Add Song</button>
+          <button type="button" class="btn ghost" id="songCancelBtn" style="display:none">Cancel Edit</button>
+        </div>
+      </form>
+      <ul class="roster" id="songList" style="margin-top:1.4rem"></ul>
+    </div>
+  </section>
+
+  <footer>Names, songs, and today's roll are saved in this browser automatically.</footer>
+</div>
+
+<!-- ============ LYRICS OVERLAY ============ -->
+<div id="lyricsOverlay">
+  <div class="lyrics-sheet">
+    <div class="lyrics-head">
+      <h2 id="lyricsTitle"></h2>
+      <span class="by" id="lyricsBy"></span>
+      <button class="close" id="lyricsClose" aria-label="Close">✕</button>
+    </div>
+    <div class="lyrics-body" id="lyricsBody"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var STORE_KEY = "worshipRoll.v1";
+
+  var ROLES = [
+    { key: "opening", label: "Opening Prayer", icon: "🙏" },
+    { key: "blood", label: "Applying the Blood of Jesus", icon: "✝️" },
+    { key: "worship", label: "Worship Lead", icon: "🎵" },
+    { key: "word", label: "Word", icon: "📖" },
+    { key: "closing", label: "Closing Prayer", icon: "🕊️" }
+  ];
+
+  /* ---------- storage ---------- */
+
+  function defaultState() {
+    return {
+      people: [
+        { id: uid(), name: "Mieko", leader: true },
+        { id: uid(), name: "Elijah", leader: true }
+      ],
+      songs: [
+        {
+          id: uid(),
+          title: "Amazing Grace",
+          leader: "",
+          lyrics: "Amazing grace! how sweet the sound,\nThat saved a wretch like me!\nI once was lost, but now am found,\nWas blind, but now I see.\n\n'Twas grace that taught my heart to fear,\nAnd grace my fears relieved;\nHow precious did that grace appear\nThe hour I first believed!\n\nThrough many dangers, toils, and snares,\nI have already come;\n'Tis grace hath brought me safe thus far,\nAnd grace will lead me home."
+        },
+        {
+          id: uid(),
+          title: "Blessed Assurance",
+          leader: "",
+          lyrics: "Blessed assurance, Jesus is mine!\nOh, what a foretaste of glory divine!\nHeir of salvation, purchase of God,\nBorn of His Spirit, washed in His blood.\n\nThis is my story, this is my song,\nPraising my Savior all the day long;\nThis is my story, this is my song,\nPraising my Savior all the day long.\n\nPerfect submission, all is at rest,\nI in my Savior am happy and blest,\nWatching and waiting, looking above,\nFilled with His goodness, lost in His love."
+        }
+      ],
+      rolls: {}
+    };
+  }
+
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(STORE_KEY);
+      if (!raw) return defaultState();
+      var s = JSON.parse(raw);
+      if (!s || !Array.isArray(s.people) || !Array.isArray(s.songs)) return defaultState();
+      s.rolls = s.rolls || {};
+      return s;
+    } catch (e) {
+      return defaultState();
+    }
+  }
+
+  function saveState() {
+    localStorage.setItem(STORE_KEY, JSON.stringify(state));
+  }
+
+  function uid() {
+    return "id-" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+  }
+
+  var state = loadState();
+  saveState();
+
+  /* ---------- helpers ---------- */
+
+  function todayKey() {
+    var d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+
+  function shuffle(arr) {
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  function personById(id) {
+    for (var i = 0; i < state.people.length; i++) if (state.people[i].id === id) return state.people[i];
+    return null;
+  }
+
+  function songById(id) {
+    for (var i = 0; i < state.songs.length; i++) if (state.songs[i].id === id) return state.songs[i];
+    return null;
+  }
+
+  function esc(str) {
+    var d = document.createElement("div");
+    d.textContent = str == null ? "" : String(str);
+    return d.innerHTML;
+  }
+
+  /* ---------- rolling ---------- */
+
+  function rollToday() {
+    var people = state.people;
+    if (people.length === 0) return null;
+
+    var leaders = people.filter(function (p) { return p.leader; });
+    if (leaders.length === 0) leaders = people;
+
+    // Worship lead comes from the leaders (Mieko / Elijah by default).
+    var lead = shuffle(leaders)[0];
+
+    // Everyone else fills the remaining four roles; only reuse people
+    // when there aren't enough names to keep every role distinct.
+    var pool = shuffle(people.filter(function (p) { return p.id !== lead.id; }));
+    var assignments = {};
+    var otherRoles = ROLES.filter(function (r) { return r.key !== "worship"; });
+    for (var i = 0; i < otherRoles.length; i++) {
+      if (pool.length === 0) pool = shuffle(people);
+      assignments[otherRoles[i].key] = pool.shift().id;
+    }
+    assignments.worship = lead.id;
+
+    // Pick the song: prefer songs assigned to the chosen leader.
+    var songId = null;
+    if (state.songs.length > 0) {
+      var leaderSongs = state.songs.filter(function (s) { return s.leader === lead.name; });
+      var songPool = leaderSongs.length > 0 ? leaderSongs : state.songs;
+      songId = shuffle(songPool)[0].id;
+    }
+
+    var roll = { assignments: assignments, songId: songId };
+    state.rolls[todayKey()] = roll;
+    saveState();
+    return roll;
+  }
+
+  /* ---------- render: roll board ---------- */
+
+  function renderBoard() {
+    var board = document.getElementById("board");
+    var hint = document.getElementById("rollHint");
+    var btn = document.getElementById("rollBtn");
+    board.innerHTML = "";
+
+    if (state.people.length === 0) {
+      btn.disabled = true;
+      hint.innerHTML = 'Add some names in the <a data-goto="people">People</a> tab first.';
+      board.innerHTML = '<div class="empty-note">The roll is waiting for its first names.</div>';
+      bindGotoLinks(hint);
+      return;
+    }
+
+    btn.disabled = false;
+    var roll = state.rolls[todayKey()];
+    if (!roll) {
+      hint.textContent = "No roll yet for today — press the button and let it decide.";
+      board.innerHTML = '<div class="empty-note">Tonight’s assignments will appear here.</div>';
+      return;
+    }
+    hint.textContent = "Rolled for today. Roll again to reshuffle.";
+
+    ROLES.forEach(function (role, idx) {
+      var person = personById(roll.assignments[role.key]);
+      var card = document.createElement("div");
+      card.className = "role-card";
+      card.style.animationDelay = (idx * 0.12) + "s";
+
+      var html =
+        '<div class="icon">' + role.icon + '</div>' +
+        '<div style="min-width:0">' +
+          '<div class="role-name">' + esc(role.label) + '</div>' +
+          '<div class="person">' + esc(person ? person.name : "—") + '</div>';
+
+      if (role.key === "worship") {
+        var song = roll.songId ? songById(roll.songId) : null;
+        if (song) {
+          html += '<div class="song-line">Song: <em>' + esc(song.title) + '</em></div>';
+        } else {
+          html += '<div class="song-line">No songs yet — add some in the Songs tab.</div>';
+        }
+      }
+      html += "</div>";
+
+      card.innerHTML = html;
+
+      if (role.key === "worship" && roll.songId && songById(roll.songId)) {
+        var lyricsBtn = document.createElement("button");
+        lyricsBtn.className = "lyrics-btn";
+        lyricsBtn.textContent = "📜 View Lyrics";
+        lyricsBtn.addEventListener("click", function () { openLyrics(roll.songId); });
+        card.appendChild(lyricsBtn);
+      }
+
+      board.appendChild(card);
+    });
+  }
+
+  /* ---------- render: people ---------- */
+
+  function renderPeople() {
+    var list = document.getElementById("peopleList");
+    list.innerHTML = "";
+    if (state.people.length === 0) {
+      list.innerHTML = '<div class="empty-note">No names yet — add the first one above.</div>';
+      return;
+    }
+    state.people.forEach(function (p) {
+      var li = document.createElement("li");
+      li.innerHTML =
+        '<span class="name">' + esc(p.name) + '</span>' +
+        (p.leader ? '<span class="badge">Worship Leader</span>' : "") +
+        '<span class="spacer"></span>';
+
+      var leadBtn = document.createElement("button");
+      leadBtn.className = "mini-btn" + (p.leader ? " on" : "");
+      leadBtn.textContent = p.leader ? "★ Leader" : "☆ Make Leader";
+      leadBtn.addEventListener("click", function () {
+        p.leader = !p.leader;
+        saveState();
+        renderAll();
+      });
+
+      var delBtn = document.createElement("button");
+      delBtn.className = "mini-btn danger";
+      delBtn.textContent = "Remove";
+      delBtn.addEventListener("click", function () {
+        if (!confirm("Remove " + p.name + " from the roll?")) return;
+        state.people = state.people.filter(function (x) { return x.id !== p.id; });
+        saveState();
+        renderAll();
+      });
+
+      li.appendChild(leadBtn);
+      li.appendChild(delBtn);
+      list.appendChild(li);
+    });
+  }
+
+  /* ---------- render: songs ---------- */
+
+  var editingSongId = null;
+
+  function renderSongLeaderOptions() {
+    var sel = document.getElementById("songLeader");
+    var current = sel.value;
+    sel.innerHTML = '<option value="">Anyone</option>';
+    state.people.filter(function (p) { return p.leader; }).forEach(function (p) {
+      var opt = document.createElement("option");
+      opt.value = p.name;
+      opt.textContent = p.name;
+      sel.appendChild(opt);
+    });
+    sel.value = current;
+    if (sel.value !== current) sel.value = "";
+  }
+
+  function renderSongs() {
+    renderSongLeaderOptions();
+    var list = document.getElementById("songList");
+    list.innerHTML = "";
+    if (state.songs.length === 0) {
+      list.innerHTML = '<div class="empty-note">No songs yet — the first two above the roll are waiting to be written in.</div>';
+      return;
+    }
+    state.songs.forEach(function (s) {
+      var li = document.createElement("li");
+      var preview = (s.lyrics || "").split("\n")[0] || "";
+      if (preview.length > 60) preview = preview.slice(0, 60) + "…";
+      li.innerHTML =
+        '<div class="song-info" style="flex:1">' +
+          '<span class="name">🎵 ' + esc(s.title) + '</span>' +
+          '<div class="song-lyrics-preview">' + (s.leader ? "Led by " + esc(s.leader) + " · " : "") + esc(preview) + '</div>' +
+        '</div>';
+
+      var viewBtn = document.createElement("button");
+      viewBtn.className = "mini-btn";
+      viewBtn.textContent = "Lyrics";
+      viewBtn.addEventListener("click", function () { openLyrics(s.id); });
+
+      var editBtn = document.createElement("button");
+      editBtn.className = "mini-btn";
+      editBtn.textContent = "Edit";
+      editBtn.addEventListener("click", function () { startEditSong(s.id); });
+
+      var delBtn = document.createElement("button");
+      delBtn.className = "mini-btn danger";
+      delBtn.textContent = "Remove";
+      delBtn.addEventListener("click", function () {
+        if (!confirm('Remove the song "' + s.title + '"?')) return;
+        state.songs = state.songs.filter(function (x) { return x.id !== s.id; });
+        saveState();
+        renderAll();
+      });
+
+      li.appendChild(viewBtn);
+      li.appendChild(editBtn);
+      li.appendChild(delBtn);
+      list.appendChild(li);
+    });
+  }
+
+  function startEditSong(id) {
+    var s = songById(id);
+    if (!s) return;
+    editingSongId = id;
+    document.getElementById("songTitle").value = s.title;
+    document.getElementById("songLeader").value = s.leader || "";
+    document.getElementById("songLyrics").value = s.lyrics || "";
+    document.getElementById("songSubmitBtn").textContent = "Save Song";
+    document.getElementById("songCancelBtn").style.display = "inline-block";
+    document.getElementById("songTitle").focus();
+  }
+
+  function resetSongForm() {
+    editingSongId = null;
+    document.getElementById("songForm").reset();
+    document.getElementById("songSubmitBtn").textContent = "Add Song";
+    document.getElementById("songCancelBtn").style.display = "none";
+  }
+
+  /* ---------- lyrics overlay ---------- */
+
+  function openLyrics(songId) {
+    var s = songById(songId);
+    if (!s) return;
+    document.getElementById("lyricsTitle").textContent = s.title;
+    document.getElementById("lyricsBy").textContent = s.leader ? "led by " + s.leader : "";
+    document.getElementById("lyricsBody").textContent = s.lyrics || "(No lyrics saved for this song yet.)";
+    document.getElementById("lyricsOverlay").classList.add("open");
+  }
+
+  function closeLyrics() {
+    document.getElementById("lyricsOverlay").classList.remove("open");
+  }
+
+  /* ---------- tabs ---------- */
+
+  function showTab(name) {
+    document.querySelectorAll("nav button").forEach(function (b) {
+      b.classList.toggle("active", b.dataset.tab === name);
+    });
+    document.querySelectorAll(".tab").forEach(function (t) {
+      t.classList.toggle("visible", t.id === "tab-" + name);
+    });
+  }
+
+  function bindGotoLinks(container) {
+    container.querySelectorAll("[data-goto]").forEach(function (a) {
+      a.addEventListener("click", function () { showTab(a.dataset.goto); });
+    });
+  }
+
+  /* ---------- wiring ---------- */
+
+  function renderAll() {
+    renderBoard();
+    renderPeople();
+    renderSongs();
+  }
+
+  document.getElementById("todayLabel").textContent = new Date().toLocaleDateString(undefined, {
+    weekday: "long", year: "numeric", month: "long", day: "numeric"
+  });
+
+  document.querySelectorAll("nav button").forEach(function (b) {
+    b.addEventListener("click", function () { showTab(b.dataset.tab); });
+  });
+
+  document.getElementById("rollBtn").addEventListener("click", function () {
+    rollToday();
+    renderBoard();
+  });
+
+  document.getElementById("personForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var input = document.getElementById("personName");
+    var name = input.value.trim();
+    if (!name) return;
+    var exists = state.people.some(function (p) { return p.name.toLowerCase() === name.toLowerCase(); });
+    if (exists) { alert(name + " is already on the roll."); return; }
+    state.people.push({ id: uid(), name: name, leader: false });
+    saveState();
+    input.value = "";
+    renderAll();
+  });
+
+  document.getElementById("songForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var title = document.getElementById("songTitle").value.trim();
+    var leader = document.getElementById("songLeader").value;
+    var lyrics = document.getElementById("songLyrics").value.trim();
+    if (!title) { alert("Please give the song a title."); return; }
+    if (editingSongId) {
+      var s = songById(editingSongId);
+      if (s) { s.title = title; s.leader = leader; s.lyrics = lyrics; }
+    } else {
+      state.songs.push({ id: uid(), title: title, leader: leader, lyrics: lyrics });
+    }
+    saveState();
+    resetSongForm();
+    renderAll();
+  });
+
+  document.getElementById("songCancelBtn").addEventListener("click", resetSongForm);
+
+  document.getElementById("lyricsClose").addEventListener("click", closeLyrics);
+  document.getElementById("lyricsOverlay").addEventListener("click", function (e) {
+    if (e.target === this) closeLyrics();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") closeLyrics();
+  });
+
+  renderAll();
+})();
+</script>
+</body>
+</html>
