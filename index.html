@@ -554,7 +554,7 @@
   <!-- ============ PEOPLE ============ -->
   <section id="tab-people" class="tab">
     <h2 class="panel-title">People</h2>
-    <p class="panel-sub">Names are saved on this device. Add them once and they stay on the roll every day. Mark someone as a <strong>Worship Leader</strong> and the Worship Lead is drawn only among leaders.</p>
+    <p class="panel-sub">Names are saved on this device. Add them once and they stay on the roll every day. Mark someone as a <strong>Worship Leader</strong> and the Worship Lead is drawn only among leaders. The <strong>Word</strong> rotates weekly: one person shares it for the whole week, then it passes to the next person.</p>
     <form class="add-row" id="personForm">
       <input type="text" id="personName" placeholder="Add a name" autocomplete="off" />
       <button type="submit" class="btn">Add</button>
@@ -662,32 +662,47 @@
     return { id: uid(), title: c.title, artist: c.artist, leader: c.leader, lyrics: "" };
   }
 
+  var MEMBER_SEED = [
+    { name: "Mieko", leader: true },
+    { name: "Elijah", leader: true },
+    { name: "Lee", leader: false },
+    { name: "Kyarah", leader: false }
+  ];
+
   function defaultState() {
     return {
-      people: [
-        { id: uid(), name: "Mieko", leader: true },
-        { id: uid(), name: "Elijah", leader: true }
-      ],
+      people: MEMBER_SEED.map(function (m) {
+        return { id: uid(), name: m.name, leader: m.leader };
+      }),
       songs: SONG_CATALOG.map(catalogSong),
       rolls: {},
-      seedVersion: 2
+      weekWord: {},
+      seedVersion: 3
     };
   }
 
   // Upgrades data saved by earlier versions of the app.
   function migrate(s) {
-    if ((s.seedVersion || 1) >= 2) return;
-    // v1 shipped two placeholder hymns; drop them if never edited,
-    // then load the real song catalog.
-    s.songs = s.songs.filter(function (x) {
-      return !((x.title === "Amazing Grace" && (x.lyrics || "").indexOf("Amazing grace! how sweet the sound") === 0) ||
-               (x.title === "Blessed Assurance" && (x.lyrics || "").indexOf("Blessed assurance, Jesus is mine!") === 0));
-    });
-    SONG_CATALOG.forEach(function (c) {
-      var exists = s.songs.some(function (x) { return (x.title || "").toLowerCase() === c.title.toLowerCase(); });
-      if (!exists) s.songs.push(catalogSong(c));
-    });
-    s.seedVersion = 2;
+    var v = s.seedVersion || 1;
+    if (v < 2) {
+      // v1 shipped two placeholder hymns; drop them if never edited,
+      // then load the real song catalog.
+      s.songs = s.songs.filter(function (x) {
+        return !((x.title === "Amazing Grace" && (x.lyrics || "").indexOf("Amazing grace! how sweet the sound") === 0) ||
+                 (x.title === "Blessed Assurance" && (x.lyrics || "").indexOf("Blessed assurance, Jesus is mine!") === 0));
+      });
+      SONG_CATALOG.forEach(function (c) {
+        var exists = s.songs.some(function (x) { return (x.title || "").toLowerCase() === c.title.toLowerCase(); });
+        if (!exists) s.songs.push(catalogSong(c));
+      });
+    }
+    if (v < 3) {
+      MEMBER_SEED.forEach(function (m) {
+        var exists = s.people.some(function (p) { return (p.name || "").toLowerCase() === m.name.toLowerCase(); });
+        if (!exists) s.people.push({ id: uid(), name: m.name, leader: m.leader });
+      });
+    }
+    s.seedVersion = 3;
   }
 
   function loadState() {
@@ -697,6 +712,7 @@
       var s = JSON.parse(raw);
       if (!s || !Array.isArray(s.people) || !Array.isArray(s.songs)) return defaultState();
       s.rolls = s.rolls || {};
+      s.weekWord = s.weekWord || {};
       migrate(s);
       return s;
     } catch (e) {
@@ -753,26 +769,62 @@
 
   /* ---------- rolling ---------- */
 
+  // The Monday of the current week, as a sortable key.
+  function weekKey() {
+    var d = new Date();
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    return "wk-" + d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+
+  // The Word is a weekly assignment: one person holds it for the whole
+  // week, and it passes to the next person on the list each new week so
+  // everyone gets a turn.
+  function wordPersonForWeek() {
+    var wk = weekKey();
+    var stored = state.weekWord[wk];
+    if (stored && personById(stored)) return personById(stored);
+
+    var prevId = null;
+    var keys = Object.keys(state.weekWord).sort();
+    for (var i = keys.length - 1; i >= 0; i--) {
+      if (keys[i] < wk) { prevId = state.weekWord[keys[i]]; break; }
+    }
+    var idx = -1;
+    if (prevId) {
+      for (var j = 0; j < state.people.length; j++) {
+        if (state.people[j].id === prevId) { idx = j; break; }
+      }
+    }
+    var next = state.people[(idx + 1) % state.people.length];
+    state.weekWord[wk] = next.id;
+    saveState();
+    return next;
+  }
+
   function rollToday() {
     var people = state.people;
     if (people.length === 0) return null;
 
+    var word = wordPersonForWeek();
+
+    // Worship lead comes from the leaders (Mieko / Elijah by default),
+    // avoiding this week's Word bearer when another leader is free.
     var leaders = people.filter(function (p) { return p.leader; });
     if (leaders.length === 0) leaders = people;
+    var freeLeaders = leaders.filter(function (p) { return p.id !== word.id; });
+    var lead = shuffle(freeLeaders.length > 0 ? freeLeaders : leaders)[0];
 
-    // Worship lead comes from the leaders (Mieko / Elijah by default).
-    var lead = shuffle(leaders)[0];
-
-    // Everyone else fills the remaining four roles; only reuse people
-    // when there aren't enough names to keep every role distinct.
-    var pool = shuffle(people.filter(function (p) { return p.id !== lead.id; }));
+    // Everyone else fills the remaining roles; only reuse people when
+    // there aren't enough names to keep every role distinct.
+    var pool = shuffle(people.filter(function (p) { return p.id !== lead.id && p.id !== word.id; }));
     var assignments = {};
-    var otherRoles = ROLES.filter(function (r) { return r.key !== "worship"; });
+    var otherRoles = ROLES.filter(function (r) { return r.key !== "worship" && r.key !== "word"; });
     for (var i = 0; i < otherRoles.length; i++) {
       if (pool.length === 0) pool = shuffle(people);
       assignments[otherRoles[i].key] = pool.shift().id;
     }
     assignments.worship = lead.id;
+    assignments.word = word.id;
 
     // Pick a song the chosen leader knows: shared songs plus the ones
     // marked as theirs only. Never hand a leader a song they don't know.
@@ -836,6 +888,9 @@
         } else {
           html += '<div class="song-line"><span>No songs yet. Add some in the Songs tab.</span></div>';
         }
+      }
+      if (role.key === "word") {
+        html += '<div class="song-line"><span>Sharing the Word all this week</span></div>';
       }
       html += "</div>";
 
