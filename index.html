@@ -565,11 +565,13 @@
   <!-- ============ SONGS ============ -->
   <section id="tab-songs" class="tab">
     <h2 class="panel-title">Worship Songs</h2>
-    <p class="panel-sub">Add your songs with their lyrics. When the roll draws a Worship Lead, it also draws a song: songs assigned to that leader are preferred, otherwise any song can come up.</p>
+    <p class="panel-sub">The song list is saved on this device. When the roll draws a Worship Lead, it only draws a song <strong>that leader knows</strong>: shared songs can go to anyone, "only" songs wait for their leader. Use Edit to paste in lyrics.</p>
     <form id="songForm">
       <label class="field-label" for="songTitle">Song title</label>
-      <input type="text" id="songTitle" placeholder="e.g. Amazing Grace" autocomplete="off" style="width:100%" />
-      <label class="field-label" for="songLeader">Led by (optional)</label>
+      <input type="text" id="songTitle" placeholder="e.g. Goodness of God" autocomplete="off" style="width:100%" />
+      <label class="field-label" for="songArtist">Artist (optional)</label>
+      <input type="text" id="songArtist" placeholder="e.g. Bethel Music" autocomplete="off" style="width:100%" />
+      <label class="field-label" for="songLeader">Who knows it</label>
       <select id="songLeader"></select>
       <label class="field-label" for="songLyrics">Lyrics</label>
       <textarea id="songLyrics" placeholder="Paste the lyrics here"></textarea>
@@ -623,28 +625,69 @@
 
   /* ---------- storage ---------- */
 
+  // The team's song list. leader "" means both worship leaders know it;
+  // a name means only that leader can be drawn with it. Lyrics are
+  // pasted in by the team via Edit on each song.
+  var SONG_CATALOG = [
+    { title: "Make Room", artist: "", leader: "" },
+    { title: "Give Me Jesus", artist: "Upperroom", leader: "" },
+    { title: "Leave Me Astounded", artist: "Planetshakers", leader: "" },
+    { title: "Inhabit", artist: "Lakewood Music", leader: "" },
+    { title: "Rest On Us", artist: "Upperroom", leader: "" },
+    { title: "God I'm Just Grateful", artist: "Elevation Worship", leader: "" },
+    { title: "Pure as Gold", artist: "City Harvest", leader: "" },
+    { title: "You Alone", artist: "City Harvest", leader: "" },
+    { title: "Set a Fire", artist: "Jesus Culture", leader: "" },
+    { title: "Build My Life", artist: "Pat Barrett", leader: "" },
+    { title: "Trust in God", artist: "Elevation Worship", leader: "" },
+    { title: "Heart of Worship", artist: "Matt Redman", leader: "" },
+    { title: "Goodness of God", artist: "Bethel Music", leader: "" },
+    { title: "Fall Like Rain", artist: "Kari Jobe", leader: "" },
+    { title: "Gratitude", artist: "", leader: "" },
+    { title: "You Saved Me", artist: "Upperroom", leader: "Mieko" },
+    { title: "I Am Not Alone", artist: "Kari Jobe", leader: "Mieko" },
+    { title: "The More I Seek You", artist: "Gateway Worship", leader: "Mieko" },
+    { title: "New Wine", artist: "Hillsong Worship", leader: "Mieko" },
+    { title: "O Faithful One", artist: "Kingdom Culture Worship", leader: "Mieko" },
+    { title: "Everything at Your Feet", artist: "Mosaic", leader: "Mieko" },
+    { title: "Breathe", artist: "Upperroom", leader: "Mieko" },
+    { title: "Love on the Line", artist: "Hillsong Worship", leader: "Mieko" },
+    { title: "Ever Be", artist: "Aaron Shust", leader: "Mieko" },
+    { title: "Be Still", artist: "Hillsong Worship", leader: "Mieko" },
+    { title: "Indescribable", artist: "Worship Circle", leader: "Mieko" },
+    { title: "Found a Love", artist: "7 Hills Worship", leader: "Mieko" }
+  ];
+
+  function catalogSong(c) {
+    return { id: uid(), title: c.title, artist: c.artist, leader: c.leader, lyrics: "" };
+  }
+
   function defaultState() {
     return {
       people: [
         { id: uid(), name: "Mieko", leader: true },
         { id: uid(), name: "Elijah", leader: true }
       ],
-      songs: [
-        {
-          id: uid(),
-          title: "Amazing Grace",
-          leader: "",
-          lyrics: "Amazing grace! how sweet the sound,\nThat saved a wretch like me!\nI once was lost, but now am found,\nWas blind, but now I see.\n\n'Twas grace that taught my heart to fear,\nAnd grace my fears relieved;\nHow precious did that grace appear\nThe hour I first believed!\n\nThrough many dangers, toils, and snares,\nI have already come;\n'Tis grace hath brought me safe thus far,\nAnd grace will lead me home."
-        },
-        {
-          id: uid(),
-          title: "Blessed Assurance",
-          leader: "",
-          lyrics: "Blessed assurance, Jesus is mine!\nOh, what a foretaste of glory divine!\nHeir of salvation, purchase of God,\nBorn of His Spirit, washed in His blood.\n\nThis is my story, this is my song,\nPraising my Savior all the day long;\nThis is my story, this is my song,\nPraising my Savior all the day long.\n\nPerfect submission, all is at rest,\nI in my Savior am happy and blest,\nWatching and waiting, looking above,\nFilled with His goodness, lost in His love."
-        }
-      ],
-      rolls: {}
+      songs: SONG_CATALOG.map(catalogSong),
+      rolls: {},
+      seedVersion: 2
     };
+  }
+
+  // Upgrades data saved by earlier versions of the app.
+  function migrate(s) {
+    if ((s.seedVersion || 1) >= 2) return;
+    // v1 shipped two placeholder hymns; drop them if never edited,
+    // then load the real song catalog.
+    s.songs = s.songs.filter(function (x) {
+      return !((x.title === "Amazing Grace" && (x.lyrics || "").indexOf("Amazing grace! how sweet the sound") === 0) ||
+               (x.title === "Blessed Assurance" && (x.lyrics || "").indexOf("Blessed assurance, Jesus is mine!") === 0));
+    });
+    SONG_CATALOG.forEach(function (c) {
+      var exists = s.songs.some(function (x) { return (x.title || "").toLowerCase() === c.title.toLowerCase(); });
+      if (!exists) s.songs.push(catalogSong(c));
+    });
+    s.seedVersion = 2;
   }
 
   function loadState() {
@@ -654,6 +697,7 @@
       var s = JSON.parse(raw);
       if (!s || !Array.isArray(s.people) || !Array.isArray(s.songs)) return defaultState();
       s.rolls = s.rolls || {};
+      migrate(s);
       return s;
     } catch (e) {
       return defaultState();
@@ -730,11 +774,12 @@
     }
     assignments.worship = lead.id;
 
-    // Pick the song: prefer songs assigned to the chosen leader.
+    // Pick a song the chosen leader knows: shared songs plus the ones
+    // marked as theirs only. Never hand a leader a song they don't know.
     var songId = null;
     if (state.songs.length > 0) {
-      var leaderSongs = state.songs.filter(function (s) { return s.leader === lead.name; });
-      var songPool = leaderSongs.length > 0 ? leaderSongs : state.songs;
+      var known = state.songs.filter(function (s) { return !s.leader || s.leader === lead.name; });
+      var songPool = known.length > 0 ? known : state.songs;
       songId = shuffle(songPool)[0].id;
     }
 
@@ -787,7 +832,7 @@
       if (role.key === "worship") {
         var song = roll.songId ? songById(roll.songId) : null;
         if (song) {
-          html += '<div class="song-line"><span>Hymn: <em>' + esc(song.title) + '</em></span></div>';
+          html += '<div class="song-line"><span>Song: <em>' + esc(song.title) + '</em>' + (song.artist ? " · " + esc(song.artist) : "") + '</span></div>';
         } else {
           html += '<div class="song-line"><span>No songs yet. Add some in the Songs tab.</span></div>';
         }
@@ -856,11 +901,11 @@
   function renderSongLeaderOptions() {
     var sel = document.getElementById("songLeader");
     var current = sel.value;
-    sel.innerHTML = '<option value="">Anyone</option>';
+    sel.innerHTML = '<option value="">Both know</option>';
     state.people.filter(function (p) { return p.leader; }).forEach(function (p) {
       var opt = document.createElement("option");
       opt.value = p.name;
-      opt.textContent = p.name;
+      opt.textContent = p.name + " only";
       sel.appendChild(opt);
     });
     sel.value = current;
@@ -877,12 +922,14 @@
     }
     state.songs.forEach(function (s) {
       var li = document.createElement("li");
-      var preview = (s.lyrics || "").split("\n")[0] || "";
-      if (preview.length > 60) preview = preview.slice(0, 60) + "…";
+      var bits = [];
+      if (s.artist) bits.push(esc(s.artist));
+      bits.push(s.leader ? esc(s.leader) + " only" : "Both know");
+      bits.push(s.lyrics ? "Lyrics saved" : "No lyrics yet");
       li.innerHTML =
         '<div class="song-info" style="flex:1">' +
           '<span class="name">' + esc(s.title) + '</span>' +
-          '<div class="song-lyrics-preview">' + (s.leader ? "Led by " + esc(s.leader) + " · " : "") + esc(preview) + '</div>' +
+          '<div class="song-lyrics-preview">' + bits.join(" · ") + '</div>' +
         '</div>';
 
       var viewBtn = document.createElement("button");
@@ -917,6 +964,7 @@
     if (!s) return;
     editingSongId = id;
     document.getElementById("songTitle").value = s.title;
+    document.getElementById("songArtist").value = s.artist || "";
     document.getElementById("songLeader").value = s.leader || "";
     document.getElementById("songLyrics").value = s.lyrics || "";
     document.getElementById("songSubmitBtn").textContent = "Save Song";
@@ -937,8 +985,10 @@
     var s = songById(songId);
     if (!s) return;
     document.getElementById("lyricsTitle").textContent = s.title;
-    document.getElementById("lyricsBy").textContent = s.leader ? "led by " + s.leader : "";
-    document.getElementById("lyricsBody").textContent = s.lyrics || "(No lyrics saved for this song yet.)";
+    document.getElementById("lyricsBy").textContent =
+      [s.artist, s.leader ? s.leader + " only" : ""].filter(Boolean).join(" · ");
+    document.getElementById("lyricsBody").textContent =
+      s.lyrics || "No lyrics saved for this song yet.\n\nGo to the Songs tab, press Edit on this song, and paste the lyrics in.";
     applyLyricsScale();
     document.getElementById("lyricsOverlay").classList.add("open");
   }
@@ -1094,14 +1144,15 @@
   document.getElementById("songForm").addEventListener("submit", function (e) {
     e.preventDefault();
     var title = document.getElementById("songTitle").value.trim();
+    var artist = document.getElementById("songArtist").value.trim();
     var leader = document.getElementById("songLeader").value;
     var lyrics = document.getElementById("songLyrics").value.trim();
     if (!title) { alert("Please give the song a title."); return; }
     if (editingSongId) {
       var s = songById(editingSongId);
-      if (s) { s.title = title; s.leader = leader; s.lyrics = lyrics; }
+      if (s) { s.title = title; s.artist = artist; s.leader = leader; s.lyrics = lyrics; }
     } else {
-      state.songs.push({ id: uid(), title: title, leader: leader, lyrics: lyrics });
+      state.songs.push({ id: uid(), title: title, artist: artist, leader: leader, lyrics: lyrics });
     }
     saveState();
     resetSongForm();
