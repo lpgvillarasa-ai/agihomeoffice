@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Daily Worship Roll</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23262119'/%3E%3Crect x='29' y='7' width='7' height='7' transform='rotate(45 32.5 10.5)' fill='%239a7b33'/%3E%3Ctext x='32' y='46' font-family=%22Georgia, 'Times New Roman', serif%22 font-size='27' font-weight='600' fill='%23e3b458' text-anchor='middle' letter-spacing='0.5'%3EAGi%3C/text%3E%3C/svg%3E" />
 <style>
   /* Embedded fonts (Cormorant Garamond, Jost) so the app works offline with full typography */
 @font-face {
@@ -1042,8 +1043,19 @@
     document.getElementById("lyricsTitle").textContent = s.title;
     document.getElementById("lyricsBy").textContent =
       [s.artist, s.leader ? s.leader + " only" : ""].filter(Boolean).join(" · ");
-    document.getElementById("lyricsBody").textContent =
-      s.lyrics || "No lyrics saved for this song yet.\n\nGo to the Songs tab, press Edit on this song, and paste the lyrics in.";
+    var body = document.getElementById("lyricsBody");
+    if (s.lyrics) {
+      body.textContent = s.lyrics;
+    } else {
+      body.textContent = "No lyrics saved for this song yet.\n\nGo to the Songs tab, press Edit on this song, and paste the lyrics in.\n\n";
+      var link = document.createElement("a");
+      link.href = "https://www.google.com/search?q=" + encodeURIComponent((s.title + " " + (s.artist || "") + " lyrics").replace(/\s+/g, " ").trim());
+      link.target = "_blank";
+      link.rel = "noopener";
+      link.textContent = "Search the lyrics online";
+      link.style.color = "var(--gold-deep)";
+      body.appendChild(link);
+    }
     applyLyricsScale();
     document.getElementById("lyricsOverlay").classList.add("open");
   }
