@@ -862,24 +862,57 @@
     var leaders = people.filter(function (p) { return p.leader; });
     if (leaders.length === 0) leaders = people;
     var freeLeaders = everyoneShares ? leaders : leaders.filter(function (p) { return p.id !== word.id; });
-    var lead = shuffle(freeLeaders.length > 0 ? freeLeaders : leaders)[0];
 
-    // Everyone else fills the remaining roles; only reuse people when
-    // there aren't enough names to keep every role distinct.
-    var pool = shuffle(people.filter(function (p) {
-      return p.id !== lead.id && (everyoneShares || p.id !== word.id);
-    }));
-    var assignments = {};
-    var otherRoles = ROLES.filter(function (r) { return r.key !== "worship" && r.key !== "word"; });
-    for (var i = 0; i < otherRoles.length; i++) {
-      if (pool.length === 0) pool = shuffle(people);
-      assignments[otherRoles[i].key] = pool.shift().id;
+    // The most recent previous day's roll: today's draw reshuffles until
+    // nobody holds the same role they had yesterday (when possible).
+    var prevAssignments = null;
+    var tk = todayKey();
+    var rollKeys = Object.keys(state.rolls).sort();
+    for (var k = rollKeys.length - 1; k >= 0; k--) {
+      if (rollKeys[k] < tk && state.rolls[rollKeys[k]].assignments) {
+        prevAssignments = state.rolls[rollKeys[k]].assignments;
+        break;
+      }
     }
-    assignments.worship = lead.id;
-    assignments.word = everyoneShares ? EVERYONE : word.id;
+
+    function draw() {
+      var lead = shuffle(freeLeaders.length > 0 ? freeLeaders : leaders)[0];
+      // Only reuse people when there aren't enough names to keep every
+      // role distinct.
+      var pool = shuffle(people.filter(function (p) {
+        return p.id !== lead.id && (everyoneShares || p.id !== word.id);
+      }));
+      var assignments = {};
+      var otherRoles = ROLES.filter(function (r) { return r.key !== "worship" && r.key !== "word"; });
+      for (var i = 0; i < otherRoles.length; i++) {
+        if (pool.length === 0) pool = shuffle(people);
+        assignments[otherRoles[i].key] = pool.shift().id;
+      }
+      assignments.worship = lead.id;
+      assignments.word = everyoneShares ? EVERYONE : word.id;
+      return assignments;
+    }
+
+    function repeatsFromYesterday(a) {
+      if (!prevAssignments) return 0;
+      var n = 0;
+      ROLES.forEach(function (r) {
+        if (a[r.key] !== EVERYONE && a[r.key] === prevAssignments[r.key]) n++;
+      });
+      return n;
+    }
+
+    var assignments = draw();
+    var score = repeatsFromYesterday(assignments);
+    for (var t = 0; t < 40 && score > 0; t++) {
+      var cand = draw();
+      var candScore = repeatsFromYesterday(cand);
+      if (candScore < score) { assignments = cand; score = candScore; }
+    }
 
     // Pick a song the chosen leader knows: shared songs plus the ones
     // marked as theirs only. Never hand a leader a song they don't know.
+    var lead = personById(assignments.worship);
     var songId = null;
     if (state.songs.length > 0) {
       var known = state.songs.filter(function (s) { return !s.leader || s.leader === lead.name; });
@@ -893,6 +926,48 @@
     return roll;
   }
 
+  /* ---------- share links ---------- */
+
+  // A roll is shared by packing names, song, and date into the URL hash,
+  // so the exact output opens on any device with no server involved.
+  function encodeShare(roll) {
+    var payload = { d: todayKey(), a: {}, s: null };
+    ROLES.forEach(function (r) {
+      var v = roll.assignments[r.key];
+      var person = v === EVERYONE ? null : personById(v);
+      payload.a[r.key] = v === EVERYONE ? EVERYONE : (person ? person.name : "?");
+    });
+    var song = roll.songId ? songById(roll.songId) : null;
+    if (song) payload.s = { t: song.title, ar: song.artist || "", v: song.video || "" };
+    return btoa(unescape(encodeURIComponent(JSON.stringify(payload))))
+      .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+
+  function decodeShare(str) {
+    try {
+      var b64 = str.replace(/-/g, "+").replace(/_/g, "/");
+      while (b64.length % 4) b64 += "=";
+      var p = JSON.parse(decodeURIComponent(escape(atob(b64))));
+      return p && p.a ? p : null;
+    } catch (e) { return null; }
+  }
+
+  function songByTitle(title) {
+    for (var i = 0; i < state.songs.length; i++) {
+      if (state.songs[i].title.toLowerCase() === (title || "").toLowerCase()) return state.songs[i];
+    }
+    return null;
+  }
+
+  var sharedView = null;
+  var hashMatch = location.hash.match(/^#r=(.+)$/);
+  if (hashMatch) sharedView = decodeShare(hashMatch[1]);
+
+  function clearSharedView() {
+    sharedView = null;
+    history.replaceState(null, "", location.pathname + location.search);
+  }
+
   /* ---------- render: roll board ---------- */
 
   function renderBoard() {
@@ -901,7 +976,7 @@
     var btn = document.getElementById("rollBtn");
     board.innerHTML = "";
 
-    if (state.people.length === 0) {
+    if (!sharedView && state.people.length === 0) {
       btn.disabled = true;
       hint.innerHTML = 'Add some names in the <a data-goto="people">People</a> tab first.';
       board.innerHTML = '<div class="empty-note">The roll is waiting for its first names.</div>';
@@ -910,19 +985,42 @@
     }
 
     btn.disabled = false;
-    var roll = currentRoll;
-    if (!roll) {
+
+    // Normalize what to show: names per role plus the song, whether it
+    // came from this device's draw or from a shared link.
+    var view = null;
+    if (sharedView) {
+      var localMatch = sharedView.s ? songByTitle(sharedView.s.t) : null;
+      view = {
+        names: sharedView.a,
+        song: sharedView.s ? { title: sharedView.s.t, artist: sharedView.s.ar, video: sharedView.s.v, localId: localMatch ? localMatch.id : null } : null
+      };
+      hint.innerHTML = "Shared roll from " + esc(sharedView.d || "the team") + '. <a id="clearShare">Back to today</a>';
+      var clearLink = hint.querySelector("#clearShare");
+      if (clearLink) clearLink.addEventListener("click", function () { clearSharedView(); renderBoard(); });
+    } else if (currentRoll) {
+      var names = {};
+      ROLES.forEach(function (r) {
+        var v = currentRoll.assignments[r.key];
+        var person = v === EVERYONE ? null : personById(v);
+        names[r.key] = v === EVERYONE ? EVERYONE : (person ? person.name : "?");
+      });
+      var song = currentRoll.songId ? songById(currentRoll.songId) : null;
+      view = {
+        names: names,
+        song: song ? { title: song.title, artist: song.artist || "", video: song.video || "", localId: song.id } : null
+      };
+      hint.textContent = "Drawn. Draw again to reshuffle.";
+    } else {
       hint.textContent = "Press the button and let it decide.";
       board.innerHTML = '<div class="empty-note">Today’s assignments will appear here.</div>';
       return;
     }
-    hint.textContent = "Drawn. Draw again to reshuffle.";
 
     ROLES.forEach(function (role, idx) {
-      var assigned = roll.assignments[role.key];
-      var isEveryone = assigned === "@everyone";
-      var person = isEveryone ? null : personById(assigned);
-      var name = isEveryone ? "Everyone" : (person ? person.name : "?");
+      var raw = view.names[role.key];
+      var isEveryone = raw === EVERYONE;
+      var name = isEveryone ? "Everyone" : (raw || "?");
       var card = document.createElement("div");
       card.className = "role-card";
       card.style.animationDelay = (idx * 0.06) + "s";
@@ -937,9 +1035,8 @@
           '</div>';
 
       if (role.key === "worship") {
-        var song = roll.songId ? songById(roll.songId) : null;
-        if (song) {
-          html += '<div class="song-line"><span>Song: <em>' + esc(song.title) + '</em>' + (song.artist ? " · " + esc(song.artist) : "") + '</span></div>';
+        if (view.song) {
+          html += '<div class="song-line"><span>Song: <em>' + esc(view.song.title) + '</em>' + (view.song.artist ? " · " + esc(view.song.artist) : "") + '</span></div>';
         } else {
           html += '<div class="song-line"><span>No songs yet. Add some in the Songs tab.</span></div>';
         }
@@ -953,26 +1050,28 @@
 
       card.innerHTML = html;
 
-      if (role.key === "worship" && roll.songId && songById(roll.songId)) {
+      if (role.key === "worship" && view.song) {
         var songLine = card.querySelector(".song-line");
-        var lyricsBtn = document.createElement("button");
-        lyricsBtn.className = "lyrics-btn";
-        lyricsBtn.textContent = "View Lyrics";
-        lyricsBtn.addEventListener("click", function () { openLyrics(roll.songId); });
-        songLine.appendChild(lyricsBtn);
-        var rolledSong = songById(roll.songId);
+        if (view.song.localId) {
+          var lyricsBtn = document.createElement("button");
+          lyricsBtn.className = "lyrics-btn";
+          lyricsBtn.textContent = "View Lyrics";
+          var localId = view.song.localId;
+          lyricsBtn.addEventListener("click", function () { openLyrics(localId); });
+          songLine.appendChild(lyricsBtn);
+        }
         var lyricsPage = document.createElement("a");
         lyricsPage.className = "lyrics-btn";
         lyricsPage.textContent = "Lyrics Page";
-        lyricsPage.href = lyricsPageUrl(rolledSong);
+        lyricsPage.href = lyricsPageUrl({ title: view.song.title, artist: view.song.artist });
         lyricsPage.target = "_blank";
         lyricsPage.rel = "noopener";
         songLine.appendChild(lyricsPage);
-        if (rolledSong.video) {
+        if (view.song.video) {
           var watch = document.createElement("a");
           watch.className = "lyrics-btn";
           watch.textContent = "▶ Video";
-          watch.href = rolledSong.video;
+          watch.href = view.song.video;
           watch.target = "_blank";
           watch.rel = "noopener";
           songLine.appendChild(watch);
@@ -981,6 +1080,31 @@
 
       board.appendChild(card);
     });
+
+    // Share button under the board, for rolls drawn on this device.
+    if (!sharedView && currentRoll) {
+      var shareZone = document.createElement("div");
+      shareZone.style.cssText = "text-align:center; margin-top:1.6rem;";
+      var shareBtn = document.createElement("button");
+      shareBtn.className = "btn ghost";
+      shareBtn.id = "shareBtn";
+      shareBtn.textContent = "Copy Share Link";
+      var link = location.href.split("#")[0] + "#r=" + encodeShare(currentRoll);
+      shareBtn.setAttribute("data-link", link);
+      shareBtn.addEventListener("click", function () {
+        function done() {
+          shareBtn.textContent = "Link Copied";
+          setTimeout(function () { shareBtn.textContent = "Copy Share Link"; }, 2000);
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(link).then(done, function () { prompt("Copy this link:", link); });
+        } else {
+          prompt("Copy this link:", link);
+        }
+      });
+      shareZone.appendChild(shareBtn);
+      board.appendChild(shareZone);
+    }
   }
 
   /* ---------- render: people ---------- */
@@ -1306,6 +1430,7 @@
 
   document.getElementById("rollBtn").addEventListener("click", function () {
     if (celebrating) return;
+    if (sharedView) clearSharedView();
     var btn = this;
     var roll = rollToday();
     if (!roll) return;
