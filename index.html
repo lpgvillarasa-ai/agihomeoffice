@@ -572,6 +572,8 @@
       <input type="text" id="songTitle" placeholder="e.g. Goodness of God" autocomplete="off" style="width:100%" />
       <label class="field-label" for="songArtist">Artist (optional)</label>
       <input type="text" id="songArtist" placeholder="e.g. Bethel Music" autocomplete="off" style="width:100%" />
+      <label class="field-label" for="songVideo">Lyric video link (optional)</label>
+      <input type="text" id="songVideo" placeholder="https://www.youtube.com/watch?v=…" autocomplete="off" style="width:100%" />
       <label class="field-label" for="songLeader">Who knows it</label>
       <select id="songLeader"></select>
       <label class="field-label" for="songLyrics">Lyrics</label>
@@ -627,40 +629,41 @@
   /* ---------- storage ---------- */
 
   // The team's song list. leader "" means both worship leaders know it;
-  // a name means only that leader can be drawn with it. Lyrics are
-  // pasted in by the team via Edit on each song.
+  // a name means only that leader can be drawn with it. Each song links
+  // to its official lyric/live video; lyrics can also be pasted in via
+  // Edit on each song.
   var SONG_CATALOG = [
-    { title: "Make Room", artist: "", leader: "" },
-    { title: "Give Me Jesus", artist: "Upperroom", leader: "" },
-    { title: "Leave Me Astounded", artist: "Planetshakers", leader: "" },
-    { title: "Inhabit", artist: "Lakewood Music", leader: "" },
-    { title: "Rest On Us", artist: "Upperroom", leader: "" },
-    { title: "God I'm Just Grateful", artist: "Elevation Worship", leader: "" },
-    { title: "Pure as Gold", artist: "City Harvest", leader: "" },
-    { title: "You Alone", artist: "City Harvest", leader: "" },
-    { title: "Set a Fire", artist: "Jesus Culture", leader: "" },
-    { title: "Build My Life", artist: "Pat Barrett", leader: "" },
-    { title: "Trust in God", artist: "Elevation Worship", leader: "" },
-    { title: "Heart of Worship", artist: "Matt Redman", leader: "" },
-    { title: "Goodness of God", artist: "Bethel Music", leader: "" },
-    { title: "Fall Like Rain", artist: "Kari Jobe", leader: "" },
-    { title: "Gratitude", artist: "", leader: "" },
-    { title: "You Saved Me", artist: "Upperroom", leader: "Mieko" },
-    { title: "I Am Not Alone", artist: "Kari Jobe", leader: "Mieko" },
-    { title: "The More I Seek You", artist: "Gateway Worship", leader: "Mieko" },
-    { title: "New Wine", artist: "Hillsong Worship", leader: "Mieko" },
-    { title: "O Faithful One", artist: "Kingdom Culture Worship", leader: "Mieko" },
-    { title: "Everything at Your Feet", artist: "Mosaic", leader: "Mieko" },
-    { title: "Breathe", artist: "Upperroom", leader: "Mieko" },
-    { title: "Love on the Line", artist: "Hillsong Worship", leader: "Mieko" },
-    { title: "Ever Be", artist: "Aaron Shust", leader: "Mieko" },
-    { title: "Be Still", artist: "Hillsong Worship", leader: "Mieko" },
-    { title: "Indescribable", artist: "Worship Circle", leader: "Mieko" },
-    { title: "Found a Love", artist: "7 Hills Worship", leader: "Mieko" }
+    { title: "Make Room", artist: "The Church Will Sing", leader: "", video: "https://www.youtube.com/watch?v=Qt0ziGaDkKE" },
+    { title: "Give Me Jesus", artist: "Upperroom", leader: "", video: "https://www.youtube.com/watch?v=YEenBiBh91A" },
+    { title: "Leave Me Astounded", artist: "Planetshakers", leader: "", video: "https://www.youtube.com/watch?v=R67WaOLEzBE" },
+    { title: "Inhabit", artist: "Lakewood Music", leader: "", video: "https://www.youtube.com/watch?v=WgLSqV5_BII" },
+    { title: "Rest On Us", artist: "Upperroom", leader: "", video: "https://www.youtube.com/watch?v=ZathS9FlvwU" },
+    { title: "God I'm Just Grateful", artist: "Elevation Worship", leader: "", video: "https://www.youtube.com/watch?v=BNKm_fOS064" },
+    { title: "Pure as Gold", artist: "City Harvest", leader: "", video: "https://www.youtube.com/watch?v=sogtEQhs12E" },
+    { title: "You Alone", artist: "City Harvest", leader: "", video: "https://www.youtube.com/watch?v=rdgxHM0JU6g" },
+    { title: "Set a Fire", artist: "Jesus Culture", leader: "", video: "https://www.youtube.com/watch?v=lZiqgrtNT6s" },
+    { title: "Build My Life", artist: "Pat Barrett", leader: "", video: "https://www.youtube.com/watch?v=QZW4_8_zCBE" },
+    { title: "Trust in God", artist: "Elevation Worship", leader: "", video: "https://www.youtube.com/watch?v=iJE4yahElBQ" },
+    { title: "Heart of Worship", artist: "Matt Redman", leader: "", video: "https://www.youtube.com/watch?v=gljs4N7ZoD4" },
+    { title: "Goodness of God", artist: "Bethel Music", leader: "", video: "https://www.youtube.com/watch?v=IvSuGyJQ6oM" },
+    { title: "Fall Like Rain", artist: "Passion (feat. Kari Jobe)", leader: "", video: "https://www.youtube.com/watch?v=1Ml_jUnVVq8" },
+    { title: "Gratitude", artist: "Brandon Lake", leader: "", video: "https://www.youtube.com/watch?v=Na6P_kLI2FE" },
+    { title: "You Saved Me", artist: "Upperroom", leader: "Mieko", video: "https://www.youtube.com/watch?v=sUnIl2nzyBs" },
+    { title: "I Am Not Alone", artist: "Kari Jobe", leader: "Mieko", video: "https://www.youtube.com/watch?v=I2oel0_Xa54" },
+    { title: "The More I Seek You", artist: "Gateway Worship", leader: "Mieko", video: "https://www.youtube.com/watch?v=mEWDr_bfp60" },
+    { title: "New Wine", artist: "Hillsong Worship", leader: "Mieko", video: "https://www.youtube.com/watch?v=QbJaM_EneMw" },
+    { title: "O Faithful One", artist: "Kingdom Culture Worship", leader: "Mieko", video: "https://www.youtube.com/results?search_query=O+Faithful+One+Kingdom+Culture+Worship" },
+    { title: "Everything at Your Feet", artist: "Mosaic MSC", leader: "Mieko", video: "https://www.youtube.com/watch?v=AfXxDi5H5m8" },
+    { title: "Breathe", artist: "Upperroom", leader: "Mieko", video: "https://www.youtube.com/watch?v=Z3elMEPQNpY" },
+    { title: "Love on the Line", artist: "Hillsong Worship", leader: "Mieko", video: "https://www.youtube.com/watch?v=_77Uinye1rc" },
+    { title: "Ever Be", artist: "Aaron Shust", leader: "Mieko", video: "https://www.youtube.com/watch?v=XZDyMJhd4Bo" },
+    { title: "Be Still", artist: "Hillsong Worship", leader: "Mieko", video: "https://www.youtube.com/watch?v=4zcHHp0GTuc" },
+    { title: "Indescribable", artist: "Worship Circle", leader: "Mieko", video: "https://www.youtube.com/watch?v=8nNRuh7wUeU" },
+    { title: "Found a Love", artist: "7 Hills Worship", leader: "Mieko", video: "https://www.youtube.com/watch?v=Wqscw6HBO6w" }
   ];
 
   function catalogSong(c) {
-    return { id: uid(), title: c.title, artist: c.artist, leader: c.leader, lyrics: "" };
+    return { id: uid(), title: c.title, artist: c.artist, leader: c.leader, video: c.video || "", lyrics: "" };
   }
 
   var MEMBER_SEED = [
@@ -678,7 +681,7 @@
       songs: SONG_CATALOG.map(catalogSong),
       rolls: {},
       weekWord: {},
-      seedVersion: 3
+      seedVersion: 4
     };
   }
 
@@ -703,7 +706,25 @@
         if (!exists) s.people.push({ id: uid(), name: m.name, leader: m.leader });
       });
     }
-    s.seedVersion = 3;
+    if (v < 4) {
+      // Attach official video links, and correct the artists the v3 seed
+      // had wrong (only when the artist was never edited by hand).
+      var OLD_ARTISTS = {
+        "make room": "",
+        "fall like rain": "Kari Jobe",
+        "gratitude": "",
+        "everything at your feet": "Mosaic"
+      };
+      SONG_CATALOG.forEach(function (c) {
+        var key = c.title.toLowerCase();
+        s.songs.forEach(function (x) {
+          if ((x.title || "").toLowerCase() !== key) return;
+          if (!x.video) x.video = c.video;
+          if (OLD_ARTISTS.hasOwnProperty(key) && (x.artist || "") === OLD_ARTISTS[key]) x.artist = c.artist;
+        });
+      });
+    }
+    s.seedVersion = 4;
   }
 
   function loadState() {
@@ -898,11 +919,22 @@
       card.innerHTML = html;
 
       if (role.key === "worship" && roll.songId && songById(roll.songId)) {
+        var songLine = card.querySelector(".song-line");
         var lyricsBtn = document.createElement("button");
         lyricsBtn.className = "lyrics-btn";
         lyricsBtn.textContent = "View Lyrics";
         lyricsBtn.addEventListener("click", function () { openLyrics(roll.songId); });
-        card.querySelector(".song-line").appendChild(lyricsBtn);
+        songLine.appendChild(lyricsBtn);
+        var rolledSong = songById(roll.songId);
+        if (rolledSong.video) {
+          var watch = document.createElement("a");
+          watch.className = "lyrics-btn";
+          watch.textContent = "▶ Watch Video";
+          watch.href = rolledSong.video;
+          watch.target = "_blank";
+          watch.rel = "noopener";
+          songLine.appendChild(watch);
+        }
       }
 
       board.appendChild(card);
@@ -981,7 +1013,7 @@
       var bits = [];
       if (s.artist) bits.push(esc(s.artist));
       bits.push(s.leader ? esc(s.leader) + " only" : "Both know");
-      bits.push(s.lyrics ? "Lyrics saved" : "No lyrics yet");
+      bits.push(s.lyrics ? "Lyrics saved" : (s.video ? "Video linked" : "No lyrics or video yet"));
       li.innerHTML =
         '<div class="song-info" style="flex:1">' +
           '<span class="name">' + esc(s.title) + '</span>' +
@@ -992,6 +1024,17 @@
       viewBtn.className = "mini-btn";
       viewBtn.textContent = "Lyrics";
       viewBtn.addEventListener("click", function () { openLyrics(s.id); });
+
+      var videoBtn = null;
+      if (s.video) {
+        videoBtn = document.createElement("a");
+        videoBtn.className = "mini-btn";
+        videoBtn.style.textDecoration = "none";
+        videoBtn.textContent = "Video";
+        videoBtn.href = s.video;
+        videoBtn.target = "_blank";
+        videoBtn.rel = "noopener";
+      }
 
       var editBtn = document.createElement("button");
       editBtn.className = "mini-btn";
@@ -1009,6 +1052,7 @@
       });
 
       li.appendChild(viewBtn);
+      if (videoBtn) li.appendChild(videoBtn);
       li.appendChild(editBtn);
       li.appendChild(delBtn);
       list.appendChild(li);
@@ -1021,6 +1065,7 @@
     editingSongId = id;
     document.getElementById("songTitle").value = s.title;
     document.getElementById("songArtist").value = s.artist || "";
+    document.getElementById("songVideo").value = s.video || "";
     document.getElementById("songLeader").value = s.leader || "";
     document.getElementById("songLyrics").value = s.lyrics || "";
     document.getElementById("songSubmitBtn").textContent = "Save Song";
@@ -1046,6 +1091,16 @@
     var body = document.getElementById("lyricsBody");
     if (s.lyrics) {
       body.textContent = s.lyrics;
+    } else if (s.video) {
+      body.textContent = "Sing along with the official lyric video.\nThe words are on screen, in time with the music.\n\n";
+      var watch = document.createElement("a");
+      watch.href = s.video;
+      watch.target = "_blank";
+      watch.rel = "noopener";
+      watch.textContent = "▶ Open the lyric video";
+      watch.style.color = "var(--gold-deep)";
+      body.appendChild(watch);
+      body.appendChild(document.createTextNode("\n\nOr paste the lyrics in via Edit on the Songs tab\nto read them right here."));
     } else {
       body.textContent = "No lyrics saved for this song yet.\n\nGo to the Songs tab, press Edit on this song, and paste the lyrics in.\n\n";
       var link = document.createElement("a");
@@ -1212,14 +1267,15 @@
     e.preventDefault();
     var title = document.getElementById("songTitle").value.trim();
     var artist = document.getElementById("songArtist").value.trim();
+    var video = document.getElementById("songVideo").value.trim();
     var leader = document.getElementById("songLeader").value;
     var lyrics = document.getElementById("songLyrics").value.trim();
     if (!title) { alert("Please give the song a title."); return; }
     if (editingSongId) {
       var s = songById(editingSongId);
-      if (s) { s.title = title; s.artist = artist; s.leader = leader; s.lyrics = lyrics; }
+      if (s) { s.title = title; s.artist = artist; s.video = video; s.leader = leader; s.lyrics = lyrics; }
     } else {
-      state.songs.push({ id: uid(), title: title, artist: artist, leader: leader, lyrics: lyrics });
+      state.songs.push({ id: uid(), title: title, artist: artist, video: video, leader: leader, lyrics: lyrics });
     }
     saveState();
     resetSongForm();
