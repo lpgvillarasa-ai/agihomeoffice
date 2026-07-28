@@ -571,7 +571,7 @@
   <!-- ============ PEOPLE ============ -->
   <section id="tab-people" class="tab">
     <h2 class="panel-title">People</h2>
-    <p class="panel-sub">Names are saved on this device. Add them once and they stay on the roll every day. Mark someone as a <strong>Worship Leader</strong> and the Worship Lead is drawn only among leaders. The <strong>Word</strong> rotates weekly: one person shares it for the whole week, then it passes to the next person.</p>
+    <p class="panel-sub">Names are saved on this device. Add them once and they stay on the roll every day. Mark someone as a <strong>Worship Leader</strong> and the Worship Lead is drawn only among leaders. The <strong>Word</strong> rotates daily so everyone takes a turn through the week, and on Friday everyone shares it together.</p>
     <form class="add-row" id="personForm">
       <input type="text" id="personName" placeholder="Add a name" autocomplete="off" />
       <button type="submit" class="btn">Add</button>
@@ -700,7 +700,7 @@
       }),
       songs: SONG_CATALOG.map(catalogSong),
       rolls: {},
-      weekWord: {},
+      wordByDate: {},
       seedVersion: 4
     };
   }
@@ -754,7 +754,7 @@
       var s = JSON.parse(raw);
       if (!s || !Array.isArray(s.people) || !Array.isArray(s.songs)) return defaultState();
       s.rolls = s.rolls || {};
-      s.weekWord = s.weekWord || {};
+      s.wordByDate = s.wordByDate || {};
       migrate(s);
       return s;
     } catch (e) {
@@ -819,25 +819,24 @@
 
   /* ---------- rolling ---------- */
 
-  // The Monday of the current week, as a sortable key.
-  function weekKey() {
-    var d = new Date();
-    d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-    return "wk-" + d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
-  }
+  // Everyone takes turns sharing the Word: a different member each day,
+  // in list order, so with four people the whole team is covered by
+  // Thursday. On Friday there is no single bearer, everyone shares.
+  var EVERYONE = "@everyone";
 
-  // The Word is a weekly assignment: one person holds it for the whole
-  // week, and it passes to the next person on the list each new week so
-  // everyone gets a turn.
-  function wordPersonForWeek() {
-    var wk = weekKey();
-    var stored = state.weekWord[wk];
-    if (stored && personById(stored)) return personById(stored);
+  function wordForToday() {
+    if (new Date().getDay() === 5) return EVERYONE;
 
+    var key = todayKey();
+    var stored = state.wordByDate[key];
+    if (stored && stored !== EVERYONE && personById(stored)) return personById(stored);
+
+    // Continue the rotation from the most recent day someone had a turn.
     var prevId = null;
-    var keys = Object.keys(state.weekWord).sort();
+    var keys = Object.keys(state.wordByDate).sort();
     for (var i = keys.length - 1; i >= 0; i--) {
-      if (keys[i] < wk) { prevId = state.weekWord[keys[i]]; break; }
+      var v = state.wordByDate[keys[i]];
+      if (keys[i] < key && v !== EVERYONE && personById(v)) { prevId = v; break; }
     }
     var idx = -1;
     if (prevId) {
@@ -846,7 +845,7 @@
       }
     }
     var next = state.people[(idx + 1) % state.people.length];
-    state.weekWord[wk] = next.id;
+    state.wordByDate[key] = next.id;
     saveState();
     return next;
   }
@@ -855,18 +854,21 @@
     var people = state.people;
     if (people.length === 0) return null;
 
-    var word = wordPersonForWeek();
+    var word = wordForToday();
+    var everyoneShares = word === EVERYONE;
 
     // Worship lead comes from the leaders (Mieko / Elijah by default),
-    // avoiding this week's Word bearer when another leader is free.
+    // avoiding today's Word bearer when another leader is free.
     var leaders = people.filter(function (p) { return p.leader; });
     if (leaders.length === 0) leaders = people;
-    var freeLeaders = leaders.filter(function (p) { return p.id !== word.id; });
+    var freeLeaders = everyoneShares ? leaders : leaders.filter(function (p) { return p.id !== word.id; });
     var lead = shuffle(freeLeaders.length > 0 ? freeLeaders : leaders)[0];
 
     // Everyone else fills the remaining roles; only reuse people when
     // there aren't enough names to keep every role distinct.
-    var pool = shuffle(people.filter(function (p) { return p.id !== lead.id && p.id !== word.id; }));
+    var pool = shuffle(people.filter(function (p) {
+      return p.id !== lead.id && (everyoneShares || p.id !== word.id);
+    }));
     var assignments = {};
     var otherRoles = ROLES.filter(function (r) { return r.key !== "worship" && r.key !== "word"; });
     for (var i = 0; i < otherRoles.length; i++) {
@@ -874,7 +876,7 @@
       assignments[otherRoles[i].key] = pool.shift().id;
     }
     assignments.worship = lead.id;
-    assignments.word = word.id;
+    assignments.word = everyoneShares ? EVERYONE : word.id;
 
     // Pick a song the chosen leader knows: shared songs plus the ones
     // marked as theirs only. Never hand a leader a song they don't know.
@@ -917,7 +919,10 @@
     hint.textContent = "Drawn. Draw again to reshuffle.";
 
     ROLES.forEach(function (role, idx) {
-      var person = personById(roll.assignments[role.key]);
+      var assigned = roll.assignments[role.key];
+      var isEveryone = assigned === "@everyone";
+      var person = isEveryone ? null : personById(assigned);
+      var name = isEveryone ? "Everyone" : (person ? person.name : "?");
       var card = document.createElement("div");
       card.className = "role-card";
       card.style.animationDelay = (idx * 0.06) + "s";
@@ -928,7 +933,7 @@
           '<div class="role-line">' +
             '<span class="role-name">' + esc(role.label) + '</span>' +
             '<span class="leader-dots"></span>' +
-            '<span class="person">' + esc(person ? person.name : "?") + '</span>' +
+            '<span class="person">' + esc(name) + '</span>' +
           '</div>';
 
       if (role.key === "worship") {
@@ -940,7 +945,9 @@
         }
       }
       if (role.key === "word") {
-        html += '<div class="song-line"><span>Sharing the Word all this week</span></div>';
+        html += isEveryone
+          ? '<div class="song-line"><span>It is Friday: everyone shares the Word</span></div>'
+          : '<div class="song-line"><span>Today’s turn in the rotation</span></div>';
       }
       html += "</div>";
 
