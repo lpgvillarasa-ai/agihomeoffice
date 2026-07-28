@@ -783,6 +783,14 @@
     return null;
   }
 
+  // A page where the song's lyrics can be read. The search shows the
+  // licensed lyrics right on the results page, with the lyrics sites as
+  // the top hits, and it works for every song without going stale.
+  function lyricsPageUrl(s) {
+    return "https://www.google.com/search?q=" +
+      encodeURIComponent((s.title + " " + (s.artist || "") + " lyrics").replace(/\s+/g, " ").trim());
+  }
+
   function esc(str) {
     var d = document.createElement("div");
     d.textContent = str == null ? "" : String(str);
@@ -926,10 +934,17 @@
         lyricsBtn.addEventListener("click", function () { openLyrics(roll.songId); });
         songLine.appendChild(lyricsBtn);
         var rolledSong = songById(roll.songId);
+        var lyricsPage = document.createElement("a");
+        lyricsPage.className = "lyrics-btn";
+        lyricsPage.textContent = "Lyrics Page";
+        lyricsPage.href = lyricsPageUrl(rolledSong);
+        lyricsPage.target = "_blank";
+        lyricsPage.rel = "noopener";
+        songLine.appendChild(lyricsPage);
         if (rolledSong.video) {
           var watch = document.createElement("a");
           watch.className = "lyrics-btn";
-          watch.textContent = "▶ Watch Video";
+          watch.textContent = "▶ Video";
           watch.href = rolledSong.video;
           watch.target = "_blank";
           watch.rel = "noopener";
@@ -1025,6 +1040,14 @@
       viewBtn.textContent = "Lyrics";
       viewBtn.addEventListener("click", function () { openLyrics(s.id); });
 
+      var pageBtn = document.createElement("a");
+      pageBtn.className = "mini-btn";
+      pageBtn.style.textDecoration = "none";
+      pageBtn.textContent = "Lyrics Page";
+      pageBtn.href = lyricsPageUrl(s);
+      pageBtn.target = "_blank";
+      pageBtn.rel = "noopener";
+
       var videoBtn = null;
       if (s.video) {
         videoBtn = document.createElement("a");
@@ -1052,6 +1075,7 @@
       });
 
       li.appendChild(viewBtn);
+      li.appendChild(pageBtn);
       if (videoBtn) li.appendChild(videoBtn);
       li.appendChild(editBtn);
       li.appendChild(delBtn);
@@ -1091,25 +1115,26 @@
     var body = document.getElementById("lyricsBody");
     if (s.lyrics) {
       body.textContent = s.lyrics;
-    } else if (s.video) {
-      body.textContent = "Sing along with the official lyric video.\nThe words are on screen, in time with the music.\n\n";
-      var watch = document.createElement("a");
-      watch.href = s.video;
-      watch.target = "_blank";
-      watch.rel = "noopener";
-      watch.textContent = "▶ Open the lyric video";
-      watch.style.color = "var(--gold-deep)";
-      body.appendChild(watch);
-      body.appendChild(document.createTextNode("\n\nOr paste the lyrics in via Edit on the Songs tab\nto read them right here."));
     } else {
-      body.textContent = "No lyrics saved for this song yet.\n\nGo to the Songs tab, press Edit on this song, and paste the lyrics in.\n\n";
-      var link = document.createElement("a");
-      link.href = "https://www.google.com/search?q=" + encodeURIComponent((s.title + " " + (s.artist || "") + " lyrics").replace(/\s+/g, " ").trim());
-      link.target = "_blank";
-      link.rel = "noopener";
-      link.textContent = "Search the lyrics online";
-      link.style.color = "var(--gold-deep)";
-      body.appendChild(link);
+      body.textContent = "No lyrics pasted in for this song yet.\nRead them on the lyrics page:\n\n";
+      var page = document.createElement("a");
+      page.href = lyricsPageUrl(s);
+      page.target = "_blank";
+      page.rel = "noopener";
+      page.textContent = "Open the lyrics page";
+      page.style.color = "var(--gold-deep)";
+      body.appendChild(page);
+      if (s.video) {
+        body.appendChild(document.createTextNode("\n\nOr sing along with the words on screen:\n\n"));
+        var watch = document.createElement("a");
+        watch.href = s.video;
+        watch.target = "_blank";
+        watch.rel = "noopener";
+        watch.textContent = "▶ Open the lyric video";
+        watch.style.color = "var(--gold-deep)";
+        body.appendChild(watch);
+      }
+      body.appendChild(document.createTextNode("\n\nPaste the lyrics in via Edit on the Songs tab\nto read them right here."));
     }
     applyLyricsScale();
     document.getElementById("lyricsOverlay").classList.add("open");
