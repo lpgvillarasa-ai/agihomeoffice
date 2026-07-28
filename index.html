@@ -707,6 +707,17 @@
 
   // Upgrades data saved by earlier versions of the app.
   function migrate(s) {
+    // Carry the retired weekly-Word history into the daily rotation so
+    // turns continue from where they left off instead of restarting.
+    if (s.weekWord) {
+      s.wordByDate = s.wordByDate || {};
+      Object.keys(s.weekWord).forEach(function (wk) {
+        var m = wk.match(/^wk-(\d{4}-\d{2}-\d{2})$/);
+        if (m && !s.wordByDate[m[1]]) s.wordByDate[m[1]] = s.weekWord[wk];
+      });
+      delete s.weekWord;
+    }
+
     var v = s.seedVersion || 1;
     if (v < 2) {
       // v1 shipped two placeholder hymns; drop them if never edited,
@@ -968,6 +979,44 @@
     history.replaceState(null, "", location.pathname + location.search);
   }
 
+  // When the drawn Word bearer has already shared (or is away), pass
+  // today's turn to the next person in the rotation. If that person
+  // already holds a role today, the outgoing bearer takes it over.
+  function passWordToNext() {
+    if (!currentRoll) return;
+    var a = currentRoll.assignments;
+    var oldId = a.word;
+    if (oldId === EVERYONE) return;
+    var idx = -1;
+    for (var i = 0; i < state.people.length; i++) {
+      if (state.people[i].id === oldId) { idx = i; break; }
+    }
+    var next = state.people[(idx + 1) % state.people.length];
+    if (!next || next.id === oldId) return;
+
+    ["opening", "blood", "closing"].forEach(function (k) {
+      if (a[k] === next.id) a[k] = oldId;
+    });
+    if (a.worship === next.id) {
+      var oldPerson = personById(oldId);
+      if (oldPerson && oldPerson.leader) a.worship = oldId;
+    }
+    a.word = next.id;
+
+    // Make sure the (possibly new) lead still knows the drawn song.
+    var lead = personById(a.worship);
+    var song = currentRoll.songId ? songById(currentRoll.songId) : null;
+    if (lead && song && song.leader && song.leader !== lead.name) {
+      var known = state.songs.filter(function (s) { return !s.leader || s.leader === lead.name; });
+      if (known.length > 0) currentRoll.songId = shuffle(known)[0].id;
+    }
+
+    state.wordByDate[todayKey()] = next.id;
+    state.rolls[todayKey()] = currentRoll;
+    saveState();
+    renderBoard();
+  }
+
   /* ---------- render: roll board ---------- */
 
   function renderBoard() {
@@ -1049,6 +1098,14 @@
       html += "</div>";
 
       card.innerHTML = html;
+
+      if (role.key === "word" && !isEveryone && !sharedView && currentRoll) {
+        var passBtn = document.createElement("button");
+        passBtn.className = "lyrics-btn";
+        passBtn.textContent = "Already shared? Pass to next";
+        passBtn.addEventListener("click", passWordToNext);
+        card.querySelector(".song-line").appendChild(passBtn);
+      }
 
       if (role.key === "worship" && view.song) {
         var songLine = card.querySelector(".song-line");
